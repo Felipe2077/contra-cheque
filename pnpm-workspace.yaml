@@ -1,0 +1,4 @@
+# contracheque-app/pnpm-workspace.yaml
+packages:
+  - 'apps/*'
+  - 'packages/*' # Para futuras bibliotecas compartilhadas
