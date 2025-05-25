@@ -73,7 +73,12 @@ async function bootstrap() {
       origin: (origin, callback) => {
         const allowedOrigins =
           env.NODE_ENV === 'development'
-            ? ['http://localhost:3000', 'http://192.168.2.107:3000', undefined] // Permite localhost e requisições sem origin (ex: Postman)
+            ? [
+                'http://localhost:3000',
+                'http://192.168.2.107:3000',
+                'http://192.168.2.115:3000',
+                undefined,
+              ] // Permite localhost e requisições sem origin (ex: Postman)
             : [env.FRONTEND_URL_PROD]; // Em produção, apenas a URL do frontend
 
         if (!allowedOrigins.includes(origin) && origin !== undefined) {

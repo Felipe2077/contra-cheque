@@ -3,6 +3,7 @@ import { AppError } from '@/shared/errors/AppError';
 import bcrypt from 'bcryptjs';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
+import { AuthController } from '../controllers/auth.controller';
 
 const cpfRegex = /^(\d{3}\.?\d{3}\.?\d{3}-?\d{2})$/;
 
@@ -16,6 +17,7 @@ const loginSchema = z.object({
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const userService = new UserService();
+  const authController = new AuthController(); // <<< INSTANCIAR O AUTHCONTROLLER
 
   app.post(
     '/auth/login', // MANTIDO O PREFIXO '/auth' AQUI
@@ -125,4 +127,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
     },
   );
+
+  // --- NOVA ROTA PARA RESET DE SENHA ---
+  app.post(
+    '/auth/reset-password', // A rota será /api/v1/auth/reset-password (se o prefixo '/auth' for aplicado ao registrar este arquivo)
+    // Se você registrou este arquivo com prefixo /auth, então o path aqui deve ser só '/reset-password'
+    // VERIFICAR COMO VOCÊ REGISTRA authRoutes em app.ts/server.ts
+    authController.resetPassword.bind(authController), // Usando o método do AuthController
+  );
+  // --- FIM DA NOVA ROTA ---
 }

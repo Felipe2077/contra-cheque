@@ -1,10 +1,11 @@
-//apps/api/src/modules/users/services/user.service.ts
+// apps/api/src/modules/users/services/user.service.ts
 import { AppDataSource } from '@/infra/database/typeorm/data-source';
 import { Employee } from '@/infra/database/typeorm/entities/employee.entity';
 import { AppError } from '@/shared/errors/AppError';
 import bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
-import { CreateUserDTO } from '../dtos/create-user.dto';
+import { v4 as uuidv4 } from 'uuid'; // <<< ADICIONADO IMPORT
+import { CreateUserDTO } from '../dtos/create-user.dto'; // DTO agora espera 'cracha'
 import { UpdateUserDTO } from '../dtos/update-user.dto';
 
 export class UserService {
@@ -15,57 +16,89 @@ export class UserService {
   }
 
   async createUser(data: CreateUserDTO): Promise<Omit<Employee, 'password'>> {
-    const { cpf, email, name, password } = data;
+    // 'data' agora deve conter 'cracha' conforme o DTO ajustado
+    const { cpf, cracha, email, password } = data;
 
+    // 1. Verificar se CPF já existe
     const cpfExists = await this.userRepository.findOneBy({ cpf });
     if (cpfExists) {
       throw new AppError('CPF already in use.', 409);
     }
 
+    // 2. Verificar se Email já existe (se fornecido e não nulo)
     if (email) {
-      // Se o email for fornecido, verificar se já existe
       const emailExists = await this.userRepository.findOneBy({ email });
       if (emailExists) {
         throw new AppError('Email address already in use.', 409);
       }
     }
 
-    const hashedPassword = await bcrypt.hash(password, 8);
+    // 3. Hash da senha
+    const hashedPassword = await bcrypt.hash(password, 10); // Aumentado salt rounds para 10
 
-    const user = this.userRepository.create({
-      cpf, // CPF normalizado (só números) pelo DTO
-      email: email || null, // Armazena null se não fornecido
-      name,
+    // 4. Gerar o UUID para o novo 'employee'
+    const newUserId = uuidv4(); // <<< GERAR O UUID
+
+    // 5. Criar a instância da entidade Employee
+    const employeeToCreate = this.userRepository.create({
+      id: newUserId, // <<< ID GERADO FORNECIDO AQUI
+      cpf,
+      cracha, // <<< USANDO 'cracha'
+      email: email || undefined, // Passa undefined se email for null ou não fornecido, TypeORM/DB lida com nullable
       password: hashedPassword,
+      // createdAt e updatedAt são gerenciados pelo TypeORM/DB
     });
 
-    await this.userRepository.save(user);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    // 6. Salvar a entidade no banco
+    try {
+      const savedEmployee = await this.userRepository.save(employeeToCreate);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...employeeWithoutPassword } = savedEmployee;
+      return employeeWithoutPassword;
+    } catch (error: any) {
+      // Logar o erro original do banco para depuração
+      console.error('DATABASE_SAVE_ERROR in createUser:', error);
+
+      // Código '23505' é para unique_violation no PostgreSQL
+      if (error.code === '23505') {
+        let field = 'CPF or Email'; // Default
+        if (error.detail && error.detail.includes('(cpf)')) {
+          field = 'CPF';
+        } else if (error.detail && error.detail.includes('(email)')) {
+          field = 'Email';
+        }
+        throw new AppError(
+          `A user with this ${field} may already exist. Please check the provided ${field}.`,
+          409,
+        );
+      }
+      // Para outros erros de banco ou inesperados
+      throw new AppError(
+        'Failed to create user due to a database or internal error.',
+        500,
+      );
+    }
   }
 
   async findById(id: string): Promise<Omit<Employee, 'password'> | null> {
     const user = await this.userRepository.findOneBy({ id });
     if (!user) {
-      throw new AppError('User not found.', 404); // Lança erro se não encontrar
+      throw new AppError('User not found.', 404);
     }
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
 
-  // Método para buscar por CPF, retornando com a senha (para login)
   async findByCpfWithPassword(cpf: string): Promise<Employee | null> {
     const user = await this.userRepository
-      .createQueryBuilder('user')
-      .addSelect('user.password') // Garante que a senha seja selecionada
-      .where('user.cpf = :cpf', { cpf })
+      .createQueryBuilder('employee') // Alias 'employee' para clareza
+      .addSelect('employee.password')
+      .where('employee.cpf = :cpf', { cpf })
       .getOne();
     return user;
   }
 
-  // Opcional: se ainda precisar buscar por email (sem senha)
   async findByEmail(email: string): Promise<Omit<Employee, 'password'> | null> {
     const user = await this.userRepository.findOneBy({ email });
     if (!user) {
@@ -88,44 +121,65 @@ export class UserService {
   async updateUser(
     id: string,
     data: UpdateUserDTO,
-  ): Promise<Omit<Employee, 'password'> | null> {
+  ): Promise<Omit<Employee, 'password'>> {
+    // Ajustado para retornar Omit, não | null
     const user = await this.userRepository.findOneBy({ id });
     if (!user) {
-      return null;
+      throw new AppError('User not found for update.', 404); // Lançar erro se não encontrado
     }
 
-    // Lógica de atualização para CPF e Email (se permitido e fornecido)
+    // Lógica de atualização para Email (se fornecido e diferente)
     if (data.email && data.email !== user.email) {
       const emailExists = await this.userRepository.findOneBy({
         email: data.email,
       });
-      if (emailExists) {
-        throw new AppError('New email address already in use.', 409);
+      // Garantir que o email existente não é do próprio usuário que está sendo atualizado
+      if (emailExists && emailExists.id !== id) {
+        throw new AppError(
+          'New email address already in use by another user.',
+          409,
+        );
       }
     }
-    // Se for permitir atualização de CPF (geralmente não se faz)
-    // if (data.cpf && data.cpf !== user.cpf) {
-    //   const cpfExists = await this.userRepository.findOneBy({ cpf: data.cpf });
-    //   if (cpfExists) {
-    //     throw new AppError('New CPF already in use.', 409);
-    //   }
+
+    // Atualizar senha se fornecida
+    if (data.password) {
+      data.password = await bcrypt.hash(data.password, 10);
+    }
+
+    // Mesclar os dados. O TypeORM é inteligente sobre campos undefined.
+    // Se data.email for undefined, ele não tentará definir user.email para undefined,
+    // a menos que você explicitamente configure para isso (ex: { nullable: true } e passando null).
+    this.userRepository.merge(user, data);
+
+    // Se você quiser permitir que um email seja explicitamente definido como null via DTO:
+    // if (data.hasOwnProperty('email') && data.email === null) {
+    //   user.email = null;
     // }
 
-    this.userRepository.merge(user, data);
-    if (data.email === undefined) user.email = null; // Se email não foi passado, mas queremos permitir "limpar"
-
-    await this.userRepository.save(user);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    try {
+      await this.userRepository.save(user);
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...userWithoutPassword } = user;
+      return userWithoutPassword;
+    } catch (error: any) {
+      console.error('DATABASE_UPDATE_ERROR in updateUser:', error);
+      if (error.code === '23505') {
+        // Unique constraint violation
+        throw new AppError(
+          `Database constraint violation during update. Check CPF or Email. Detail: ${error.detail || error.message}`,
+          409,
+        );
+      }
+      throw new AppError(
+        'Failed to update user due to a database or internal error.',
+        500,
+      );
+    }
   }
 
   async deleteUser(id: string): Promise<boolean> {
     const result = await this.userRepository.delete(id);
-    return (
-      result.affected !== null &&
-      result.affected !== undefined &&
-      result.affected > 0
-    );
+    return !!result.affected && result.affected > 0; // Forma mais concisa
   }
 }
