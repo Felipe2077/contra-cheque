@@ -1,0 +1,10 @@
+# contracheque-app/apps/api/.dockerignore
+node_modules
+dist
+.turbo
+.git
+.gitignore
+Dockerfile
+.dockerignore
+*.log
+.env

@@ -1,0 +1,49 @@
+# contracheque-app/docker-compose.yml
+services:
+  api:
+    container_name: contracheque_api
+    build:
+      context: . # <--- MUDANÇA PRINCIPAL: Contexto agora é a raiz do monorepo
+      dockerfile: apps/api/Dockerfile # <--- Caminho para o Dockerfile a partir da raiz
+    ports:
+      - '${API_PORT:-3333}:${API_PORT:-3333}'
+    env_file:
+      - ./apps/api/.env # <--- Caminho para o .env da API a partir da raiz
+    environment:
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-docker}:${POSTGRES_PASSWORD:-docker}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-contracheque_db}?schema=public'
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - contracheque_network
+
+  db:
+    container_name: contracheque_postgres_db
+    image: postgres:15-alpine
+    ports:
+      - '${POSTGRES_HOST_PORT:-5432}:${POSTGRES_PORT:-5432}'
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-docker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docker}
+      POSTGRES_DB: ${POSTGRES_DB:-contracheque_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - contracheque_network
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-docker} -d ${POSTGRES_DB:-contracheque_db}',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+
+networks:
+  contracheque_network:
+    driver: bridge

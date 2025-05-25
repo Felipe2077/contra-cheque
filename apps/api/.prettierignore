@@ -1,0 +1,4 @@
+# contracheque-app/apps/api/.prettierignore
+node_modules
+dist
+coverage
