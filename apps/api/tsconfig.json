@@ -1,24 +1,30 @@
+//apps/api/tsconfig.json
 {
   "compilerOptions": {
-    "target": "ES2021", // Ou mais recente se preferir
-    "module": "commonjs",
+    "target": "ES2022", // Atualizado para um pouco mais recente
+    "module": "ESNext", // <--- IMPORTANTE: Mudar para ESNext para 'tsx' e ESM nativo
+    "moduleResolution": "Bundler", // <--- IMPORTANTE: Melhor para ESM e tooling moderno (substitui 'node' para este caso)
     "lib": ["esnext"],
-    "baseUrl": "./src",
+    "baseUrl": "./src", // <--- OK: Base é a pasta 'src'
     "paths": {
-      "@/*": ["*"]
+      "@/*": ["*"] // <--- AJUSTADO: "@/" agora aponta para a raiz de "src"
+      // Ex: "@/modules/users" se resolverá para "src/modules/users"
     },
     "resolveJsonModule": true,
-    "allowJs": true,
-    "outDir": "./dist",
+    // "allowJs": true, // Geralmente não necessário se você só tem .ts
+    "outDir": "./dist", // <--- OK: Para quando você compilar com tsc
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
-    "experimentalDecorators": true, // Necessário para TypeORM
-    "emitDecoratorMetadata": true, // Necessário para TypeORM
-    "moduleResolution": "node",
-    "sourceMap": true // Útil para debugging
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "sourceMap": true
   },
-  "include": ["src/**/*.ts", "src/**/*.json"],
+  "ts-node": {
+    // Adicionado para ts-node, pode ser útil para outras ferramentas também (tsx geralmente não precisa)
+    "require": ["tsconfig-paths/register"]
+  },
+  "include": ["**/*.ts", "**/*.d.ts"], // Simplificado e mais abrangente dentro de src por causa do baseUrl
   "exclude": ["node_modules", "dist"]
 }

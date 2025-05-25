@@ -8,10 +8,10 @@ const envSchema = z.object({
     .default('development'),
   PORT: z.coerce.number().default(3333),
   DATABASE_URL: z.string().min(1), // Ex: postgresql://user:pass@host:port/db
-  // Futuramente:
-  // JWT_SECRET: z.string().min(1),
-  // API_BASE_URL: z.string().url().default('http://localhost:3333'),
-  // CORS_ORIGIN: z.string().default('*'),
+  JWT_SECRET: z
+    .string()
+    .min(32, { message: 'JWT_SECRET must be at least 32 characters long' }),
+  JWT_EXPIRES_IN: z.string().default('1d'),
 });
 
 const _env = envSchema.safeParse(process.env);
