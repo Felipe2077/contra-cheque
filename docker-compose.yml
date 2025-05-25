@@ -19,7 +19,7 @@ services:
 
   db:
     container_name: contracheque_postgres_db
-    image: postgres:15-alpine
+    image: postgres:latest
     ports:
       - '${POSTGRES_HOST_PORT:-5432}:${POSTGRES_PORT:-5432}'
     environment:
