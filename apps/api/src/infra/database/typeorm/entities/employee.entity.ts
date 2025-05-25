@@ -25,7 +25,8 @@ export class Employee {
   @Column({ type: 'text', unique: true, name: 'cpf' }) // Adicionado name: 'cpf' explicitamente
   cpf!: string;
 
-  @Column({ type: 'text' })
+  @Index({ unique: true }) // <<< NOVO: Adiciona um índice único no banco
+  @Column({ type: 'text', unique: true }) // <<< NOVO: Informa ao TypeORM que este campo deve ser único
   cracha!: string;
 
   @Column({ type: 'text', nullable: true })

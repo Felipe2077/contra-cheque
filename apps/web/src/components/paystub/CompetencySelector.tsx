@@ -49,7 +49,7 @@ export function CompetencySelector({
         <SelectContent>
           {competencies && competencies.length > 0 ? (
             competencies.map((comp) => (
-              <SelectItem key={comp.refMesAno} value={comp.refMesAno}>
+              <SelectItem key={Math.random()} value={comp.refMesAno}>
                 {comp.nomeMes.trim()}/{comp.ano} ({comp.refMesAno})
               </SelectItem>
             ))

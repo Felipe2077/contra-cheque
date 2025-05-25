@@ -1,13 +1,5 @@
 //apps/api/src/infra/database/typeorm/entities/paystub.entity.ts
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryColumn,
-} from 'typeorm';
-import { Employee } from './employee.entity';
+import { Column, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity('paystubs') // Nome exato da tabela no banco - CORRETO
 // @Index('paystubs_competencia_cracha_idx', ['competencia', 'cracha']) // MANTIDO - Bom para performance de queries
@@ -24,16 +16,16 @@ export class Paystub {
   cracha!: string;
 
   // Relacionamento: Muitos Paystubs pertencem a um Employee
-  @ManyToOne(() => Employee, (employee) => employee.paystubs, {
-    onDelete: 'NO ACTION', // OU 'NO ACTION' ou 'CASCADE' - Decida a estratégia de deleção.
-    // 'SET NULL': Se um Employee for deletado, o paystubs.cpf ficará NULL. (Requer que paystubs.cpf seja nullable)
-    // 'NO ACTION': Impede a deleção do Employee se ele tiver paystubs. (Mais seguro para integridade)
-    // 'CASCADE': Se um Employee for deletado, todos os seus paystubs também serão. (Use com cuidado)
-    onUpdate: 'CASCADE', // Se o employes.cpf for atualizado (raro para um CPF), atualiza paystubs.cpf
-    // eager: false, // Mantenha false para performance, carregue sob demanda.
-  })
-  @JoinColumn({ name: 'cpf', referencedColumnName: 'cpf' }) // Correto: paystubs.cpf -> employes.cpf
-  employee!: Employee; // Propriedade para acessar o objeto Employee relacionado
+  // @ManyToOne(() => Employee, (employee) => employee.paystubs, {
+  //   onDelete: 'NO ACTION', // OU 'NO ACTION' ou 'CASCADE' - Decida a estratégia de deleção.
+  //   // 'SET NULL': Se um Employee for deletado, o paystubs.cpf ficará NULL. (Requer que paystubs.cpf seja nullable)
+  //   // 'NO ACTION': Impede a deleção do Employee se ele tiver paystubs. (Mais seguro para integridade)
+  //   // 'CASCADE': Se um Employee for deletado, todos os seus paystubs também serão. (Use com cuidado)
+  //   onUpdate: 'CASCADE', // Se o employes.cpf for atualizado (raro para um CPF), atualiza paystubs.cpf
+  //   // eager: false, // Mantenha false para performance, carregue sob demanda.
+  // })
+  // @JoinColumn({ name: 'cpf', referencedColumnName: 'cpf' }) // Correto: paystubs.cpf -> employes.cpf
+  // employee!: Employee; // Propriedade para acessar o objeto Employee relacionado
 
   @Column({ type: 'text', name: 'dmtu' })
   dmtu!: string;

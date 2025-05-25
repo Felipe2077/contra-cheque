@@ -23,6 +23,7 @@ import apiClient from '@/lib/axios'; // Importe o apiClient configurado
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import { LogInIcon } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -136,23 +137,35 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name='password'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Senha</FormLabel>
-                    <FormControl>
-                      <Input
-                        type='password'
-                        placeholder='••••••••'
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className='flex flex-col'>
+                <FormField
+                  control={form.control}
+                  name='password'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Senha</FormLabel>
+                      <FormControl>
+                        <Input
+                          type='password'
+                          placeholder='••••••••'
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className='mt-1 text-center text-sm self-end'>
+                  <Link
+                    href='/esqueci-a-senha'
+                    className='hover:underline text-yellow-300 font-medium'
+                  >
+                    Esqueci a senha.
+                  </Link>
+                </div>
+              </div>
+
               {loginError && (
                 <p className='text-sm font-medium text-destructive'>
                   {loginError}
@@ -165,6 +178,15 @@ export default function LoginPage() {
           </Form>
         </CardContent>
       </Card>
+      <div className='mt-4 text-center text-sm'>
+        Não tem uma conta?{' '}
+        <Link
+          href='/cadastro'
+          className='hover:underline text-yellow-300 font-bold'
+        >
+          Cadastre-se
+        </Link>
+      </div>
     </div>
   );
 }

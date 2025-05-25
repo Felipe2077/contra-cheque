@@ -1,52 +1,85 @@
 // apps/api/src/modules/users/services/user.service.ts
 import { AppDataSource } from '@/infra/database/typeorm/data-source';
 import { Employee } from '@/infra/database/typeorm/entities/employee.entity';
+import { Paystub } from '@/infra/database/typeorm/entities/paystub.entity'; //
 import { AppError } from '@/shared/errors/AppError';
 import bcrypt from 'bcryptjs';
 import { Repository } from 'typeorm';
-import { v4 as uuidv4 } from 'uuid'; // <<< ADICIONADO IMPORT
-import { CreateUserDTO } from '../dtos/create-user.dto'; // DTO agora espera 'cracha'
+import { v4 as uuidv4 } from 'uuid';
+import { CreateUserDTO } from '../dtos/create-user.dto';
 import { UpdateUserDTO } from '../dtos/update-user.dto';
 
 export class UserService {
   private userRepository: Repository<Employee>;
+  private paystubRepository: Repository<Paystub>; // B
 
   constructor() {
     this.userRepository = AppDataSource.getRepository(Employee);
+    this.paystubRepository = AppDataSource.getRepository(Paystub);
   }
 
   async createUser(data: CreateUserDTO): Promise<Omit<Employee, 'password'>> {
-    // 'data' agora deve conter 'cracha' conforme o DTO ajustado
     const { cpf, cracha, email, password } = data;
 
-    // 1. Verificar se CPF já existe
-    const cpfExists = await this.userRepository.findOneBy({ cpf });
-    if (cpfExists) {
-      throw new AppError('CPF already in use.', 409);
+    // --- INÍCIO DAS VALIDAÇÕES ---
+
+    // VALIDAÇÃO NOVA: CPF é de um funcionário existente (usando Paystub)
+    // Esta deve ser uma das primeiras validações.
+    const employeeRecordExists = await this.paystubRepository.findOneBy({
+      cpf,
+    });
+    if (!employeeRecordExists) {
+      throw new AppError(
+        'Este CPF não corresponde a um funcionário registrado. Cadastro não permitido.',
+        403, // Forbidden - não tem permissão para se registrar
+      );
     }
 
-    // 2. Verificar se Email já existe (se fornecido e não nulo)
+    // VALIDAÇÃO ORIGINAL 1 (agora VALIDAÇÃO 2): Verificar se CPF já existe na tabela 'employes' (usuários)
+    const cpfExistsInUsers = await this.userRepository.findOneBy({ cpf });
+    if (cpfExistsInUsers) {
+      // Ajuste na mensagem de erro para ser mais específica sobre onde o CPF já existe
+      throw new AppError(
+        'Este CPF já foi cadastrado como um usuário no sistema.',
+        409,
+      );
+    }
+
+    // VALIDAÇÃO ORIGINAL 2 (agora VALIDAÇÃO 3): Verificar se Email já existe (se fornecido e não nulo)
     if (email) {
       const emailExists = await this.userRepository.findOneBy({ email });
       if (emailExists) {
-        throw new AppError('Email address already in use.', 409);
+        throw new AppError(
+          'Email address already in use by another user.',
+          409,
+        );
       }
     }
 
+    // VALIDAÇÃO NOVA (adicionada anteriormente): Unicidade do Crachá no sistema de usuários (Employee)
+    // (Esta validação agora é reforçada pela constraint do banco também)
+    const crachaExistsInUsers = await this.userRepository.findOneBy({ cracha });
+    if (crachaExistsInUsers) {
+      throw new AppError(
+        'Este crachá já está cadastrado para outro usuário.',
+        409,
+      );
+    }
+    // --- FIM DAS VALIDAÇÕES ---
+
     // 3. Hash da senha
-    const hashedPassword = await bcrypt.hash(password, 10); // Aumentado salt rounds para 10
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // 4. Gerar o UUID para o novo 'employee'
-    const newUserId = uuidv4(); // <<< GERAR O UUID
+    const newUserId = uuidv4();
 
     // 5. Criar a instância da entidade Employee
     const employeeToCreate = this.userRepository.create({
-      id: newUserId, // <<< ID GERADO FORNECIDO AQUI
+      id: newUserId,
       cpf,
-      cracha, // <<< USANDO 'cracha'
-      email: email || undefined, // Passa undefined se email for null ou não fornecido, TypeORM/DB lida com nullable
+      cracha,
+      email: email || undefined,
       password: hashedPassword,
-      // createdAt e updatedAt são gerenciados pelo TypeORM/DB
     });
 
     // 6. Salvar a entidade no banco
@@ -56,23 +89,23 @@ export class UserService {
       const { password: _, ...employeeWithoutPassword } = savedEmployee;
       return employeeWithoutPassword;
     } catch (error: any) {
-      // Logar o erro original do banco para depuração
       console.error('DATABASE_SAVE_ERROR in createUser:', error);
 
-      // Código '23505' é para unique_violation no PostgreSQL
       if (error.code === '23505') {
-        let field = 'CPF or Email'; // Default
-        if (error.detail && error.detail.includes('(cpf)')) {
-          field = 'CPF';
-        } else if (error.detail && error.detail.includes('(email)')) {
-          field = 'Email';
-        }
-        throw new AppError(
-          `A user with this ${field} may already exist. Please check the provided ${field}.`,
-          409,
-        );
+        // unique_violation no PostgreSQL
+        let fieldMessage = 'um campo único'; // Mensagem padrão
+        // Detalhar qual campo causou a violação de unicidade
+        if (error.detail?.includes('(cpf)')) fieldMessage = 'o CPF fornecido';
+        else if (error.detail?.includes('(email)'))
+          fieldMessage = 'o email fornecido';
+        else if (error.detail?.includes('(cracha)'))
+          fieldMessage = 'o crachá fornecido';
+        // Se for outra constraint única que não as esperadas:
+        else if (error.constraint)
+          fieldMessage = `o campo da constraint '${error.constraint}'`;
+
+        throw new AppError(`Já existe um registro com ${fieldMessage}.`, 409);
       }
-      // Para outros erros de banco ou inesperados
       throw new AppError(
         'Failed to create user due to a database or internal error.',
         500,
@@ -92,7 +125,7 @@ export class UserService {
 
   async findByCpfWithPassword(cpf: string): Promise<Employee | null> {
     const user = await this.userRepository
-      .createQueryBuilder('employee') // Alias 'employee' para clareza
+      .createQueryBuilder('employee')
       .addSelect('employee.password')
       .where('employee.cpf = :cpf', { cpf })
       .getOne();
@@ -122,18 +155,15 @@ export class UserService {
     id: string,
     data: UpdateUserDTO,
   ): Promise<Omit<Employee, 'password'>> {
-    // Ajustado para retornar Omit, não | null
     const user = await this.userRepository.findOneBy({ id });
     if (!user) {
-      throw new AppError('User not found for update.', 404); // Lançar erro se não encontrado
+      throw new AppError('User not found for update.', 404);
     }
 
-    // Lógica de atualização para Email (se fornecido e diferente)
     if (data.email && data.email !== user.email) {
       const emailExists = await this.userRepository.findOneBy({
         email: data.email,
       });
-      // Garantir que o email existente não é do próprio usuário que está sendo atualizado
       if (emailExists && emailExists.id !== id) {
         throw new AppError(
           'New email address already in use by another user.',
@@ -142,20 +172,22 @@ export class UserService {
       }
     }
 
-    // Atualizar senha se fornecida
+    // <<< ADICIONADO: Validação de Crachá ao atualizar (se fornecido e diferente) >>>
+    if (data.cracha && data.cracha !== user.cracha) {
+      const crachaExists = await this.userRepository.findOneBy({
+        cracha: data.cracha,
+      });
+      // Garantir que o crachá existente não é do próprio usuário que está sendo atualizado
+      if (crachaExists && crachaExists.id !== id) {
+        throw new AppError('New crachá already in use by another user.', 409);
+      }
+    }
+
     if (data.password) {
       data.password = await bcrypt.hash(data.password, 10);
     }
 
-    // Mesclar os dados. O TypeORM é inteligente sobre campos undefined.
-    // Se data.email for undefined, ele não tentará definir user.email para undefined,
-    // a menos que você explicitamente configure para isso (ex: { nullable: true } e passando null).
     this.userRepository.merge(user, data);
-
-    // Se você quiser permitir que um email seja explicitamente definido como null via DTO:
-    // if (data.hasOwnProperty('email') && data.email === null) {
-    //   user.email = null;
-    // }
 
     try {
       await this.userRepository.save(user);
@@ -165,9 +197,18 @@ export class UserService {
     } catch (error: any) {
       console.error('DATABASE_UPDATE_ERROR in updateUser:', error);
       if (error.code === '23505') {
-        // Unique constraint violation
+        // <<< MELHORIA NA MENSAGEM DE ERRO DE UPDATE PARA UNICIDADE >>>
+        let fieldMessage = 'um campo único';
+        if (error.detail?.includes('(cpf)'))
+          fieldMessage = 'o CPF fornecido'; // CPF não deve ser atualizável geralmente
+        else if (error.detail?.includes('(email)'))
+          fieldMessage = 'o email fornecido';
+        else if (error.detail?.includes('(cracha)'))
+          fieldMessage = 'o crachá fornecido';
+        else if (error.constraint)
+          fieldMessage = `o campo da constraint '${error.constraint}'`;
         throw new AppError(
-          `Database constraint violation during update. Check CPF or Email. Detail: ${error.detail || error.message}`,
+          `A atualização falhou pois ${fieldMessage} já está em uso.`,
           409,
         );
       }
@@ -180,6 +221,6 @@ export class UserService {
 
   async deleteUser(id: string): Promise<boolean> {
     const result = await this.userRepository.delete(id);
-    return !!result.affected && result.affected > 0; // Forma mais concisa
+    return !!result.affected && result.affected > 0;
   }
 }
