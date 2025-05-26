@@ -4,6 +4,7 @@
 
 import { Button } from '@/components/ui/button';
 import { LogOutIcon } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 interface PageHeaderProps {
@@ -15,6 +16,7 @@ export function PageHeader({ title, onLogout }: PageHeaderProps) {
   return (
     <header className='bg-background border-b shadow-sm sticky top-0 z-50 print:hidden'>
       <div className='container mx-auto flex h-16 items-center justify-between px-4 md:px-6'>
+        <Image src='/logo.png' alt='pio logo' width={50} height={50} />
         <Link href='/' className='text-xl font-bold text-primary sm:text-2xl'>
           {title}
         </Link>

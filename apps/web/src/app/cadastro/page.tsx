@@ -26,7 +26,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { UserPlus } from 'lucide-react'; // Ícone para a página
+import { ArrowLeft, UserPlus } from 'lucide-react'; // Ícone para a página
 
 // Serviço de autenticação
 import {
@@ -139,8 +139,18 @@ export default function SignUpPage() {
 
   return (
     <div className='flex min-h-[99dvh] flex-col items-center justify-center bg-muted/40 p-4'>
-      <Card className='w-full max-w-md'>
+      <Card className='w-full max-w-md relative'>
         <CardHeader className='text-center'>
+          <Button
+            variant='ghost'
+            size='icon'
+            className='absolute w-10 h-10 top-4 left-4 text-muted-foreground hover:text-foreground cursor-pointer' // Removi w-15 h-15 para teste
+            onClick={() => router.push('/login')}
+          >
+            {/* Remova as props width/height, use apenas classes Tailwind para o ícone */}
+            {/* h-6 w-6 (24px) ou h-7 w-7 (28px) são boas opções para um botão size="icon" */}
+            <ArrowLeft className='h-7 w-7' /> {/* Ou h-6 w-6, h-8 w-8 */}
+          </Button>
           <div className='mb-4 flex justify-center'>
             <div className='bg-primary text-primary-foreground rounded-full p-3'>
               <UserPlus size={32} />
@@ -257,7 +267,7 @@ export default function SignUpPage() {
             Já tem uma conta?{' '}
             <Link
               href='/login'
-              className='font-medium text-primary hover:underline'
+              className='font-medium text-primary hover:underline text-yellow-300'
             >
               Fazer Login
             </Link>

@@ -76,9 +76,20 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  /* ... TODAS as suas variáveis :root existentes ... */
+  --foreground: oklch(0.145 0 0);
+
+  /* >> ADICIONE SUA COR AQUI << */
+  --empresa-amarelo-glow: oklch(0.85 0.25 85);
 }
 
 .dark {
+  --empresa-amarelo-glow: oklch(
+    0.88 0.23 85
+  ); /* Exemplo: pode ser um pouco mais brilhante no escuro */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -158,4 +169,86 @@ pdf-generation-mode {
 /* Mas é uma segurança para o canvas geral da página */
 body.pdf-active-for-body {
   background-color: #ffffff !important;
+}
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* >> ADICIONE A ANIMAÇÃO E A CLASSE DO CARD AQUI << */
+@keyframes rotateGlow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.glow-wrapper {
+  position: relative;
+  /* O wrapper agora NÃO tem padding. Ele apenas contém o brilho. */
+  /* O border-radius aqui é crucial para dar forma ao brilho. */
+  border-radius: var(
+    --radius-xl
+  ); /* Assumindo que seu Card interno usa rounded-xl (var(--radius-xl)) */
+  overflow: hidden; /* Para cortar o ::before que é maior */
+}
+
+.glow-wrapper::before {
+  content: '';
+  position: absolute;
+  /* inset: 0; -- Com width/height 200%, top/left -50% é melhor para centralizar o conic-gradient */
+  width: 200%;
+  height: 200%;
+  top: -50%;
+  left: -50%;
+
+  z-index: 0; /* Fica no fundo do wrapper, atrás do Card que virá por cima */
+
+  background: conic-gradient(
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    /* Adicionei mais 'transparent' para tentar afinar o "raio" de luz */
+      var(--empresa-amarelo-glow),
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent,
+    transparent
+  );
+
+  animation: rotateGlow 7s linear infinite;
+}
+
+/* Garante que o conteúdo do card fique por cima do brilho e tenha seu próprio fundo */
+/* Os componentes CardHeader, CardContent, etc., do Shadcn geralmente já têm 'bg-card' */
+.card-login-glow > [data-radix-collection-item], /* Seletor comum para filhos de componentes Radix */
+.card-login-glow > .shadcn-card-header, /* Exemplo, se você tiver classes customizadas */
+.card-login-glow > .shadcn-card-content {
+  position: relative;
+  z-index: 1; /* Acima do brilho */
 }

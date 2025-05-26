@@ -20,9 +20,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import apiClient from '@/lib/axios'; // Importe o apiClient configurado
+import { cn } from '@/lib/utils';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
-import { LogInIcon } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -105,79 +106,111 @@ export default function LoginPage() {
   }
 
   return (
-    <div className='flex min-h-[99dvh] flex-col items-center justify-center bg-muted/40 p-4'>
-      <Card className='w-full max-w-sm'>
-        <CardHeader className='text-center'>
-          <div className='mb-4 flex justify-center'>
-            <div className='bg-primary text-primary-foreground rounded-full p-3'>
-              <LogInIcon size={32} />
+    <div className='flex min-h-[99dvh] flex-col items-center justify-center bg-muted/40 p-4 '>
+      <div
+        className={cn(
+          'glow-wrapper',
+          'rounded-xl', // Garante que o wrapper tenha o mesmo arredondamento externo que o card teria
+          'w-full max-w-sm shadow-lg',
+          'relative z-[1]', // Card fica na frente do ::before do wrapper
+          'm-[2px]'
+        )}
+      >
+        <Card
+          className={cn(
+            'relative z-[1]', // Card fica na frente do ::before do wrapper
+            'm-[2px]' // << IMPORTANTE: Margem de 2px no Card.
+            // Esta margem cria o espaço para o "fundo" (::before) do wrapper aparecer como borda.
+            // O Card PRECISA ter seu próprio background (bg-card) para cobrir o centro.
+            // O Card já tem rounded-xl ou similar, que deve ser um pouco menor que o do wrapper
+            // ou o mesmo se a margem for pequena.
+            // Se o wrapper tem rounded-xl, e o card tem margin e bg-card,
+            // o border-radius do card (que shadcn aplica, ex: rounded-lg) vai definir a forma interna.
+            // Para um resultado mais previsível, você pode querer que o card também seja rounded-xl
+            // ou um pouco menos (rounded-lg) se a margem for 2px.
+            // 'rounded-lg' // Ex: Se --radius-xl é 1rem, e --radius-lg é 0.75rem.
+          )}
+        >
+          <CardHeader className='text-center'>
+            <div className='mb-4 flex justify-center'>
+              <div className='text-primary-foreground rounded-full p-3'>
+                <Image
+                  src='/logo.png'
+                  width={92}
+                  height={92}
+                  alt='logomarca viação pioneira'
+                />
+              </div>
             </div>
-          </div>
-          <CardTitle className='text-2xl font-bold'>
-            Acesso ao Sistema
-          </CardTitle>
-          <CardDescription>
-            Digite seu CPF e senha para continuar.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-              <FormField
-                control={form.control}
-                name='cpf'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>CPF</FormLabel>
-                    <FormControl>
-                      {/* Idealmente, usaríamos uma máscara de input para CPF aqui */}
-                      <Input placeholder='000.000.000-00' {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className='flex flex-col'>
+            <CardTitle className='text-2xl font-bold'>
+              Contracheque Viação Pioneira
+            </CardTitle>
+            <CardDescription className='mt-2'>
+              Digite seu CPF e senha para continuar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit(onSubmit)}
+                className='space-y-6'
+              >
                 <FormField
                   control={form.control}
-                  name='password'
+                  name='cpf'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Senha</FormLabel>
+                      <FormLabel>CPF</FormLabel>
                       <FormControl>
-                        <Input
-                          type='password'
-                          placeholder='••••••••'
-                          {...field}
-                        />
+                        {/* Idealmente, usaríamos uma máscara de input para CPF aqui */}
+                        <Input placeholder='000.000.000-00' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <div className='flex flex-col'>
+                  <FormField
+                    control={form.control}
+                    name='password'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Senha</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='password'
+                            placeholder='••••••••'
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <div className='mt-1 text-center text-sm self-end'>
-                  <Link
-                    href='/esqueci-a-senha'
-                    className='hover:underline text-yellow-300 font-medium'
-                  >
-                    Esqueci a senha.
-                  </Link>
+                  <div className='mt-2 text-center text-sm self-end'>
+                    <Link
+                      href='/esqueci-a-senha'
+                      className='hover:underline text-yellow-300 font-medium'
+                    >
+                      Esqueci a senha.
+                    </Link>
+                  </div>
                 </div>
-              </div>
 
-              {loginError && (
-                <p className='text-sm font-medium text-destructive'>
-                  {loginError}
-                </p>
-              )}
-              <Button type='submit' className='w-full' disabled={isLoading}>
-                {isLoading ? 'Entrando...' : 'Entrar'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+                {loginError && (
+                  <p className='text-sm font-medium text-destructive'>
+                    {loginError}
+                  </p>
+                )}
+                <Button type='submit' className='w-full' disabled={isLoading}>
+                  {isLoading ? 'Entrando...' : 'Entrar'}
+                </Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
       <div className='mt-4 text-center text-sm'>
         Não tem uma conta?{' '}
         <Link

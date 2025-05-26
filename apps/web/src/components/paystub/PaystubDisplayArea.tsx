@@ -22,7 +22,7 @@ export function PaystubDisplayArea({
   return (
     <div
       id='paystub-details-render-area'
-      className='pt-6 mt-6 print:pt-0 print:mt-0'
+      className='pt-6 mt-6 print:pt-0 print:mt-0 '
     >
       {isLoadingDetails && selectedCompetency && (
         <div className='text-center py-8 print:hidden'>

@@ -25,7 +25,7 @@ export function PdfActions({
       onClick={onGeneratePdf}
       size='sm'
       disabled={isGeneratingPdf}
-      className='print:hidden mt-4'
+      className='print:hidden mt-4 mx-4'
     >
       {isGeneratingPdf ? (
         <>

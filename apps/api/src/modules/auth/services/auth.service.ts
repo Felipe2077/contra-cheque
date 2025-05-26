@@ -49,7 +49,10 @@ export class AuthService {
     // Precisamos da entidade completa para atualizar a senha, então não usamos findByCpfWithPassword aqui
     const employee = await this.employeeRepository.findOneBy({ cpf });
     if (!employee) {
-      throw new AppError('User not found for the provided CPF.', 404);
+      throw new AppError(
+        'Nenhum funcionário encontrado com o CPF informado.',
+        404,
+      );
     }
 
     // 2. Buscar um registro Paystub para o CPF
@@ -57,7 +60,10 @@ export class AuthService {
     if (!paystubEntry) {
       // Esta mensagem é genérica para não revelar se o CPF existe mas não tem contracheque,
       // ou se os dados de verificação estão faltando no contracheque.
-      throw new AppError('Verification data mismatch or not found.', 400);
+      throw new AppError(
+        'Um ou mais dados de confirmação estão incorretos. Por favor, verifique.',
+        400,
+      );
     }
 
     // 3. Verificar se os campos de verificação existem no paystubEntry
@@ -65,7 +71,10 @@ export class AuthService {
       console.warn(
         `Incomplete verification data in paystub for CPF: ${cpf}. DataNasc: ${paystubEntry.dataNasc}, NomeMae: ${paystubEntry.nomeMae}`,
       );
-      throw new AppError('Verification data mismatch or not found.', 400);
+      throw new AppError(
+        'Um ou mais dados de confirmação estão incorretos. Por favor, verifique.',
+        400,
+      );
     }
 
     // 4. Comparar os dados de verificação
@@ -80,7 +89,10 @@ export class AuthService {
       console.debug(
         `Date of birth mismatch for CPF: ${cpf}. DB: ${formattedDataNascFromDb}, Input: ${formattedDataNascFromInput}`,
       );
-      throw new AppError('Verification data mismatch or not found.', 400);
+      throw new AppError(
+        'Um ou mais dados de confirmação estão incorretos. Por favor, verifique.',
+        400,
+      );
     }
 
     // Comparar Primeiro Nome da Mãe (normalizando)
@@ -92,7 +104,10 @@ export class AuthService {
       console.debug(
         `Mother's first name mismatch for CPF: ${cpf}. DB: ${primeiroNomeMaeFromDb}, Input: ${primeiroNomeMaeFromInput}`,
       );
-      throw new AppError('Verification data mismatch or not found.', 400);
+      throw new AppError(
+        'Um ou mais dados de confirmação estão incorretos. Por favor, verifique.',
+        400,
+      );
     }
 
     // 5. Se a verificação for bem-sucedida, atualizar a senha

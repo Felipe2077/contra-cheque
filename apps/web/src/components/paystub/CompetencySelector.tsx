@@ -27,7 +27,7 @@ export function CompetencySelector({
   const isDisabled = !competencies || competencies.length === 0 || isLoading;
 
   return (
-    <div className='print:hidden'>
+    <div className='print:hidden mx-4'>
       <label
         htmlFor='competency-select'
         className='block text-sm font-medium text-foreground mb-1'
