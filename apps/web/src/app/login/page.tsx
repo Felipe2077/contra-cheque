@@ -142,8 +142,8 @@ export default function LoginPage() {
                 />
               </div>
             </div>
-            <CardTitle className='text-2xl font-bold'>
-              Contracheque Viação Pioneira
+            <CardTitle className='text-[20px] font-bold'>
+              Demonstrativo de Pagamento. <br /> Viação Pioneira
             </CardTitle>
             <CardDescription className='mt-2'>
               Digite seu CPF e senha para continuar.

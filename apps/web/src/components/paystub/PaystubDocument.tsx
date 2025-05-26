@@ -100,31 +100,38 @@ export function PaystubDocument({ details }: PaystubDocumentProps) {
           <div className='col-span-3 text-right pr-1 py-0.5'>DESCONTOS</div>
         </div>
         {events.length > 0 &&
-          events.map((event) => (
-            <div
-              className='grid grid-cols-12 border-b border-stone-400 hover:bg-gray-50'
-              key={event.id}
-            >
-              <div className='col-span-1 text-center border-r border-stone-400 py-0.5'>
-                {event.codEvento}
+          events
+            .sort((a, b) => {
+              // Primeiro os PROVENTOS (P), depois os DESCONTOS (D)
+              if (a.tipoEvento === 'P' && b.tipoEvento === 'D') return -1;
+              if (a.tipoEvento === 'D' && b.tipoEvento === 'P') return 1;
+              return 0;
+            })
+            .map((event) => (
+              <div
+                className='grid grid-cols-12 border-b border-stone-400 hover:bg-gray-50'
+                key={event.id}
+              >
+                <div className='col-span-1 text-center border-r border-stone-400 py-0.5'>
+                  {event.codEvento}
+                </div>
+                <div className='col-span-4 pl-1 border-r border-stone-400 py-0.5 truncate'>
+                  {event.evento}
+                </div>
+                <div className='col-span-1 text-center border-r border-stone-400 py-0.5'>
+                  {String(event.referencia) === '0' ||
+                  String(event.referencia) === '0.00'
+                    ? ''
+                    : parseFloat(String(event.referencia)).toFixed(2)}
+                </div>
+                <div className='col-span-3 text-right pr-1 border-r border-stone-400 py-0.5'>
+                  {event.tipoEvento === 'P' ? formatCurrency(event.valor) : ''}
+                </div>
+                <div className='col-span-3 text-right pr-1 py-0.5'>
+                  {event.tipoEvento === 'D' ? formatCurrency(event.valor) : ''}
+                </div>
               </div>
-              <div className='col-span-4 pl-1 border-r border-stone-400 py-0.5 truncate'>
-                {event.evento}
-              </div>
-              <div className='col-span-1 text-center border-r border-stone-400 py-0.5'>
-                {String(event.referencia) === '0' ||
-                String(event.referencia) === '0.00'
-                  ? ''
-                  : parseFloat(String(event.referencia)).toFixed(2)}
-              </div>
-              <div className='col-span-3 text-right pr-1 border-r border-stone-400 py-0.5'>
-                {event.tipoEvento === 'D' ? formatCurrency(event.valor) : ''}
-              </div>
-              <div className='col-span-3 text-right pr-1 py-0.5'>
-                {event.tipoEvento === 'P' ? formatCurrency(event.valor) : ''}
-              </div>
-            </div>
-          ))}
+            ))}
       </div>
 
       {/* Totais */}
