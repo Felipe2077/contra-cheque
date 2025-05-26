@@ -1,0 +1,5 @@
+# monorepo-root/.dockerignore
+**/node_modules
+**/.next
+**/dist
+npm-debug.log

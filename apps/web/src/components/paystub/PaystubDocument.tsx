@@ -118,10 +118,10 @@ export function PaystubDocument({ details }: PaystubDocumentProps) {
                   : parseFloat(String(event.referencia)).toFixed(2)}
               </div>
               <div className='col-span-3 text-right pr-1 border-r border-stone-400 py-0.5'>
-                {event.tipoEvento === 'P' ? formatCurrency(event.valor) : ''}
+                {event.tipoEvento === 'D' ? formatCurrency(event.valor) : ''}
               </div>
               <div className='col-span-3 text-right pr-1 py-0.5'>
-                {event.tipoEvento === 'D' ? formatCurrency(event.valor) : ''}
+                {event.tipoEvento === 'P' ? formatCurrency(event.valor) : ''}
               </div>
             </div>
           ))}

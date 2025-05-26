@@ -1,6 +1,6 @@
 // apps/web/src/app/api/generate-pdf/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer, { Margin, PaperFormat } from 'puppeteer';
+import puppeteer, { PaperFormat } from 'puppeteer';
 
 // Função auxiliar para obter o conteúdo do seu CSS global.
 // Precisaremos discutir a melhor forma de fazer isso no seu projeto.
@@ -2125,13 +2125,16 @@ export async function POST(req: NextRequest) {
     // Para Docker, geralmente o Puppeteer encontra o Chromium que ele baixa.
     // Para ambientes serverless, pode ser necessário usar algo como @sparticuz/chromium.
     browser = await puppeteer.launch({
-      headless: 'new',
+      headless: true,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        // '--disable-dev-shm-usage', // Útil em alguns ambientes Docker com /dev/shm limitado
-        // '--font-render-hinting=none', // Pode ajudar com renderização de fontes
-        // '--disable-gpu', // Pode ser necessário em ambientes sem GPU
+        '--disable-dev-shm-usage', // Importante em ambientes com /dev/shm limitado
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        // '--single-process', // Descomente se ainda tiver problemas de Zygote
+        '--disable-gpu', // Útil em ambientes sem GPU
       ],
       // Se você precisar especificar um caminho para o Chromium (ex: com @sparticuz/chromium):
       // executablePath: await chromium.executablePath(),
@@ -2151,12 +2154,11 @@ export async function POST(req: NextRequest) {
       format: 'A4' as PaperFormat,
       printBackground: true, // MUITO IMPORTANTE para cores de fundo e imagens
       margin: {
-        // Ajuste conforme necessário
         top: '0.4in',
         right: '0.2in',
         bottom: '0.4in',
         left: '0.2in',
-      } as Margin,
+      },
       // path: 'debug_contracheque.pdf' // Descomente para salvar um arquivo no servidor para debug
     };
 

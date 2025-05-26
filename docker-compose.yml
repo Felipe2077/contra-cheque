@@ -1,33 +1,71 @@
-# contracheque-app/docker-compose.yml
+# monorepo-root/docker-compose.yml
 services:
   api:
     container_name: contracheque_api
     build:
-      context: . # <--- MUDANÇA PRINCIPAL: Contexto agora é a raiz do monorepo
-      dockerfile: apps/api/Dockerfile # <--- Caminho para o Dockerfile a partir da raiz
+      context: .
+      dockerfile: apps/api/Dockerfile
+    image: contracheque-api # Adicionei um nome de imagem local
     ports:
-      - '${API_PORT:-3333}:${API_PORT:-3333}'
+      # Mapeia API_HOST_PORT (no seu PC) para API_INTERNAL_PORT (dentro do container da API)
+      - '${API_HOST_PORT:-3334}:${API_INTERNAL_PORT:-3334}'
     env_file:
-      - ./apps/api/.env # <--- Caminho para o .env da API a partir da raiz
+      - ./apps/api/.env # Para JWT_SECRET e outras configs específicas da API
     environment:
-      DATABASE_URL: 'postgresql://${POSTGRES_USER:-docker}:${POSTGRES_PASSWORD:-docker}@db:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-contracheque_db}?schema=public'
+      NODE_ENV: production
+      PORT: ${API_INTERNAL_PORT:-3334} # Porta que a API escuta DENTRO do container
+      # DATABASE_URL construída com variáveis que vêm do .env da raiz ou dos defaults
+      DATABASE_URL: 'postgresql://${POSTGRES_USER:-docker}:${POSTGRES_PASSWORD:-docker_pass}@db:${POSTGRES_INTERNAL_PORT:-5432}/${POSTGRES_DB:-contracheque_db}?schema=public'
     depends_on:
       db:
         condition: service_healthy
     networks:
       - contracheque_network
+    # volumes: # Descomente para desenvolvimento com hot-reload
+    #   - ./apps/api:/app
+    #   - /app/node_modules # Evita sobrescrever node_modules do container
+    #   - /app/dist # Evita sobrescrever dist do container
+    # command: pnpm --filter @contracheque/api run dev # Comando para modo dev
+
+  web:
+    container_name: contracheque_web
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    image: contracheque-web # Nome da imagem local
+    ports:
+      # Mapeia WEB_HOST_PORT (no seu PC) para WEB_INTERNAL_PORT (dentro do container do Web)
+      - '${WEB_HOST_PORT:-3000}:${WEB_INTERNAL_PORT:-3000}'
+    environment:
+      NODE_ENV: production
+      PORT: ${WEB_INTERNAL_PORT:-3000} # Porta que o Next.js escuta DENTRO do container
+
+      # A aplicação web acessa a API pelo nome do serviço 'api' e sua PORTA INTERNA
+      NEXT_PUBLIC_API_URL: 'http://api:${API_INTERNAL_PORT:-3334}'
+    depends_on:
+      - api
+    networks:
+      - contracheque_network
+    # volumes: # Descomente para desenvolvimento com hot-reload
+    #   - ./apps/web:/app
+    #   - /app/node_modules
+    #   - /app/apps/web/.next
+    # command: pnpm --filter web run dev
 
   db:
     container_name: contracheque_postgres_db
-    image: postgres:latest
+    image: postgres:17-alpine
     ports:
-      - '${POSTGRES_HOST_PORT:-5432}:${POSTGRES_PORT:-5432}'
+      # Mapeia POSTGRES_HOST_PORT (no seu PC) para POSTGRES_INTERNAL_PORT (dentro do container do DB)
+      - '${POSTGRES_HOST_PORT:-5433}:${POSTGRES_INTERNAL_PORT:-5432}'
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-docker}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-docker_pass} # Use senhas fortes no .env da raiz
       POSTGRES_DB: ${POSTGRES_DB:-contracheque_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Adicionado para restaurar o dump na primeira inicialização
+      - ./banco.dump:/docker-entrypoint-initdb.d/banco.dump
     networks:
       - contracheque_network
     healthcheck:
@@ -39,10 +77,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 10s # Adicionado para dar tempo ao Postgres iniciar antes do healthcheck
 
 volumes:
   postgres_data:
+    driver: local
 
 networks:
   contracheque_network:

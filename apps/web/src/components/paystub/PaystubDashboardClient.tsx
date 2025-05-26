@@ -153,8 +153,9 @@ export default function PaystubDashboardClient() {
         try {
           const errorData = await response.json();
           errorMessage = errorData.message || errorData.details || errorMessage;
-        } catch (e) {
+        } catch (e: unknown) {
           /* Ignora erro ao parsear JSON do erro */
+          console.log(e);
         }
         throw new Error(errorMessage);
       }
@@ -197,7 +198,7 @@ export default function PaystubDashboardClient() {
 
   return (
     <div className='flex min-h-screen flex-col bg-muted/10 print:bg-white'>
-      <PageHeader title='Meu Contracheque' onLogout={handleLogout} />
+      <PageHeader title='Demonstrativo de Pagamento' onLogout={handleLogout} />
       <main className='flex-grow container mx-auto py-4 px-2 md:p-6 lg:p-8 print:p-0'>
         <Card className='w-full max-w-4xl mx-auto print:shadow-none print:border-none print:rounded-none'>
           <CardHeader className='print:hidden'>

@@ -12,7 +12,7 @@ import { Paystub } from './entities/paystub.entity';
 const dataSourceOptions: DataSourceOptions = {
   type: 'postgres',
   url: env.DATABASE_URL, // Vem do nosso .env (ex: postgresql://user:pass@host:port/db)
-  ssl: env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false, // Ajuste para produção se necessário
+  ssl: false, // Ajuste para produção se necessário
 
   // Sincronização deve ser false em produção! Use migrações.
   // synchronize: env.NODE_ENV === 'development', // Apenas para desenvolvimento inicial, para criar tabelas automaticamente

@@ -1,7 +1,8 @@
-import type { NextConfig } from "next";
+// monorepo-root/apps/web/next.config.ts
+import { NextConfig } from 'next'; // Importe o tipo NextConfig se ainda não o fez
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  output: 'standalone', // Essencial para Docker otimizado!
 };
 
 export default nextConfig;

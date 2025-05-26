@@ -75,7 +75,9 @@ async function bootstrap() {
           env.NODE_ENV === 'development'
             ? [
                 'http://localhost:3000',
-                'http://192.168.2.107:3000',
+                'http://10.10.100.79:3001',
+                'http://192.168.1.221:3000',
+                'http://contracheque.vpioneira.com.br:3001',
                 'http://192.168.2.115:3000',
                 undefined,
               ] // Permite localhost e requisições sem origin (ex: Postman)

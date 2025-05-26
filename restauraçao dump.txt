@@ -1,0 +1,4 @@
+docker cp ./banco.dump contracheque_postgres_db:/tmp/banco.dump
+
+
+docker compose exec db pg_restore -U admin_contracheque -d contracheque_app_prod_db --clean --if-exists /tmp/banco.dump

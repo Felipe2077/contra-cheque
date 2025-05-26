@@ -1,47 +1,56 @@
-# contracheque-app/apps/api/Dockerfile
+# monorepo-root/apps/api/Dockerfile
 
-# ---- Base Node ----
-FROM node:20-slim AS base
+# Estágio 1: Base com PNPM
+FROM node:20-alpine AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
-WORKDIR /usr/src/app
+RUN corepack enable pnpm
+WORKDIR /app
 
-# ---- Dependencies ----
-FROM base AS dependencies
-COPY package.json ./package.json
-COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY pnpm-lock.yaml ./pnpm-lock.yaml
-COPY apps/api/package.json ./apps/api/package.json
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --filter @contracheque/api --prod --frozen-lockfile
+# Estágio 2: Instalar dependências e construir a API
+FROM base AS builder
+# Copiar arquivos de manifesto do pnpm e turbo.json
+COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
+COPY turbo.json ./
 
-# ---- Build ----
-FROM base AS build
-COPY package.json ./package.json
-COPY pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY pnpm-lock.yaml ./pnpm-lock.yaml
-COPY apps/api ./apps/api 
-# Instala todas as dependências (incluindo dev) para o build
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --filter @contracheque/api --frozen-lockfile
-RUN pnpm --filter @contracheque/api build # Isso deve criar apps/api/dist
+# Copiar package.json da raiz e do app específico
+COPY package.json ./
+COPY apps/api/package.json ./apps/api/
 
-# ---- Release ----
-FROM base AS release
-WORKDIR /usr/src/app # WORKDIR da imagem final
+# Copiar o código fonte da API e quaisquer packages/libs que ela dependa diretamente
+# Se a API depende de, por exemplo, packages/config, copie-os também:
+# COPY packages/config ./packages/config
+COPY apps/api ./apps/api
 
-# Copia as dependências de produção do estágio 'dependencies'
-# O PNPM coloca os node_modules do pacote filtrado dentro da sua própria pasta
-COPY --from=dependencies /usr/src/app/apps/api/node_modules ./node_modules
-# Pode ser necessário copiar também os da raiz do workspace se o PNPM colocar algo lá que é necessário em runtime
-COPY --from=dependencies /usr/src/app/node_modules ./node_modules_root_workspace # Cuidado com colisões se não for gerenciado
+# Instalar dependências para a API e suas dependências de workspace
+# O '...' no final do filtro é importante para incluir dependências do workspace.
+RUN pnpm install --filter @contracheque/api...
 
-# Copia o código buildado (dist) da API do estágio 'build'
-# O build está em /usr/src/app/apps/api/dist
-COPY --from=build /usr/src/app/apps/api/dist ./dist
+# Construir apenas a API usando o script 'build' dela
+RUN pnpm --filter @contracheque/api run build
+# O build da API (@contracheque/api) gera a pasta 'dist' em apps/api/dist
 
-# Copia o package.json da API para a raiz da imagem final.
-# Certifique-se que apps/api/package.json tem "main": "dist/server.js"
-COPY apps/api/package.json ./package.json
+# Estágio 3: Imagem de produção
+FROM node:20-alpine AS production
+WORKDIR /app
 
-EXPOSE 3333
-CMD [ "node", "dist/server.js" ]
+ENV NODE_ENV production
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable pnpm
+
+# Copiar o package.json da API construída para instalar SOMENTE dependências de produção
+COPY --from=builder /app/apps/api/package.json ./package.json
+# Copiar o código construído (pasta dist)
+COPY --from=builder /app/apps/api/dist ./dist
+
+# Instalar apenas as dependências de produção
+RUN pnpm install --prod
+
+# Expor a porta que sua API usa (definida via variável de ambiente no docker-compose)
+# A porta padrão da API Fastify é geralmente 3000 ou 3334.
+# Vamos assumir 3334 como padrão se PORT não for fornecido.
+EXPOSE ${PORT:-3334}
+
+CMD ["node", "dist/server.js"]

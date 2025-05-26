@@ -1,0 +1,15 @@
+# Tagueando a imagem da API
+docker tag contracheque-api:latest felipebatista54/contracheque-api:latest
+docker tag contracheque-api:latest felipebatista54/contracheque-api:1.0.0 
+
+# Tagueando a imagem da Web App
+docker tag contracheque-web:latest felipebatista54/contracheque-web:latest
+docker tag contracheque-web:latest felipebatista54/contracheque-web:1.0.0 
+
+
+docker push felipebatista54/contracheque-api:latest
+docker push felipebatista54/contracheque-web:latest
+
+
+docker push felipebatista54/contracheque-api:1.0.0
+docker push felipebatista54/contracheque-web:1.0.0
