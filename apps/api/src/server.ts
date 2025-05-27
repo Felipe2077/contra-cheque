@@ -79,6 +79,7 @@ async function bootstrap() {
                 'http://192.168.1.221:3000',
                 'http://contracheque.vpioneira.com.br:3001',
                 'http://192.168.2.115:3000',
+
                 undefined,
               ] // Permite localhost e requisições sem origin (ex: Postman)
             : [env.FRONTEND_URL_PROD]; // Em produção, apenas a URL do frontend

@@ -8,10 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { PaystubSummary } from '@/types/paystub';
+import { PaystubDetails, PaystubSummary } from '@/types/paystub';
+import { ExportAsPDF } from './ExportAsPDF';
 
 interface CompetencySelectorProps {
   competencies: PaystubSummary[] | undefined;
+  paystubDetails: PaystubDetails | undefined;
   selectedCompetency: string | undefined;
   onCompetencyChange: (value: string) => void;
   isLoading: boolean;
@@ -23,6 +25,7 @@ export function CompetencySelector({
   selectedCompetency,
   onCompetencyChange,
   isLoading,
+  paystubDetails,
 }: CompetencySelectorProps) {
   const isDisabled = !competencies || competencies.length === 0 || isLoading;
 
@@ -60,6 +63,7 @@ export function CompetencySelector({
           )}
         </SelectContent>
       </Select>
+      <div className='mt-4'>{paystubDetails && <ExportAsPDF />}</div>
     </div>
   );
 }

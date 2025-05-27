@@ -72,12 +72,8 @@ export default function LoginPage() {
       password: data.password,
     };
 
-    console.log('Enviando para API:', payload);
-
     try {
       const response = await apiClient.post('/auth/login', payload);
-
-      console.log('Resposta da API:', response.data);
 
       if (response.data && response.data.token) {
         localStorage.setItem('authToken', response.data.token);

@@ -1,29 +1,33 @@
 // src/components/paystub/PaystubDocument.tsx
-import { LOGO_PIONEIRA_BASE64 } from '@/constants/logoConstants'; // Importando o logo
+import { cn } from '@/lib/utils';
 import { PaystubDetails } from '@/types/paystub';
 import { formatCurrency } from '@/utils/formatters';
 import Image from 'next/image';
+import { useRef } from 'react';
 
 interface PaystubDocumentProps {
   details: PaystubDetails;
 }
 
 export function PaystubDocument({ details }: PaystubDocumentProps) {
+  const isPdfMode = useRef(false);
   if (!details) return null;
 
   const { header, events } = details;
 
   return (
     <div
-      id='paycheck-document' // Mantemos o ID para a função de gerar PDF
-      className='flex flex-col bg-white border border-stone-400 text-black mx-auto print:border-none print:shadow-none' // Adicionado print:border-none print:shadow-none
-      style={{ maxWidth: '800px' }} // Mantido para consistência visual, pode ser ajustado via CSS global para print
+      id='paycheck-document'
+      className={cn(
+        'flex flex-col bg-white border border-stone-400 text-black mx-auto print:border-none print:shadow-none',
+        isPdfMode.current ? 'pdf-bg-white pdf-text-black' : ''
+      )}
     >
       {/* Cabeçalho da Empresa */}
-      <div className='flex text-[0.65rem] border-b border-stone-400 gap-1 p-1'>
+      <div className='flex text-[0.65rem] border-b  border-stone-400 gap-1 p-1'>
         <div className='flex-shrink-0 bg-black rounded-[1px]'>
           <Image
-            src={LOGO_PIONEIRA_BASE64} // Usando a constante diretamente
+            src={'/logo.png'} // Usando a constante diretamente
             width={70} // Ajuste conforme necessário para o tamanho do logo no documento
             height={70}
             alt='Logo Empresa'

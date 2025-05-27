@@ -4,6 +4,7 @@
 import { PaystubDetails } from '@/types/paystub';
 import { Info, Loader2 } from 'lucide-react';
 import { PaystubDocument } from './PaystubDocument'; // Já existente
+import { PaystubPDF } from './PaystubPDF';
 
 interface PaystubDisplayAreaProps {
   selectedCompetency: string | undefined;
@@ -49,17 +50,26 @@ export function PaystubDisplayArea({
       {!isLoadingDetails &&
         !isDetailsError &&
         paystubDetails &&
-        selectedCompetency && <PaystubDocument details={paystubDetails} />}
-
-      {!selectedCompetency &&
-        !isLoadingDetails && ( // Mostrar se nenhuma competência selecionada
-          <div className='text-center py-8 print:hidden'>
-            <Info className='mx-auto h-12 w-12 text-muted-foreground/50 mb-3' />
-            <p className='text-muted-foreground'>
-              Escolha um período acima para exibir seu contracheque.
-            </p>
-          </div>
+        selectedCompetency && (
+          <>
+            <PaystubDocument details={paystubDetails} />
+            {/* Contracheque para PDF (invisível) */}
+            <div
+              style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}
+            >
+              <PaystubPDF details={paystubDetails} />
+            </div>
+          </>
         )}
+
+      {!selectedCompetency && !isLoadingDetails && (
+        <div className='text-center py-8 print:hidden'>
+          <Info className='mx-auto h-12 w-12 text-muted-foreground/50 mb-3' />
+          <p className='text-muted-foreground'>
+            Escolha um período acima para exibir seu contracheque.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

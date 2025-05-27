@@ -27,7 +27,6 @@ import { PageHeader } from '@/components/layout/PageHeader'; // Ajuste o caminho
 import { CompetencySelector } from './CompetencySelector';
 import { DashboardLoadingScreen } from './DashboardLoadingScreen';
 import { PaystubDisplayArea } from './PaystubDisplayArea';
-import { PdfActions } from './PdfActions';
 
 export default function PaystubDashboardClient() {
   const router = useRouter();
@@ -36,7 +35,6 @@ export default function PaystubDashboardClient() {
   const [selectedCompetency, setSelectedCompetency] = useState<
     string | undefined
   >(undefined);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('authToken');
@@ -91,104 +89,6 @@ export default function PaystubDashboardClient() {
     setSelectedCompetency(value);
   };
 
-  const handleGeneratePdf = async () => {
-    if (!paystubDetails || !selectedCompetency) {
-      alert(
-        'Por favor, selecione um período e carregue os detalhes do contracheque primeiro.'
-      );
-      return;
-    }
-
-    const elementToPrint = document.getElementById('paycheck-document');
-    if (!elementToPrint) {
-      alert(
-        'Erro: Não foi possível encontrar o conteúdo do contracheque para gerar o PDF.'
-      );
-      return;
-    }
-
-    setIsGeneratingPdf(true);
-    const printableElement = elementToPrint.cloneNode(true) as HTMLElement;
-    const logoImgElementInClone = printableElement.querySelector(
-      '#paycheckCompanyLogo'
-    ) as HTMLImageElement;
-
-    if (logoImgElementInClone) {
-      console.log(
-        '[PDF DEBUG] Logo encontrado no clone para ajuste de tamanho para o PDF.'
-      );
-
-      // O componente next/image já deve ter setado o src para o Base64.
-      // Vamos ajustar os atributos e estilos para o PDF.
-      logoImgElementInClone.setAttribute('width', '100');
-      logoImgElementInClone.setAttribute('height', '100');
-
-      // Ajustar também os estilos CSS para garantir o tamanho desejado
-      // e como a imagem se comporta dentro dessas dimensões.
-      logoImgElementInClone.style.width = '100px';
-      logoImgElementInClone.style.height = '100px';
-      // Você pode adicionar/ajustar object-fit se necessário:
-      // logoImgElementInClone.style.objectFit = 'contain'; // ou 'cover', 'fill', 'scale-down'
-
-      console.log(
-        '[PDF DEBUG] Tamanho do logo no clone ajustado para 100x100px para o PDF.'
-      );
-    } else {
-      console.warn(
-        '[PDF DEBUG] Logo com ID "paycheckCompanyLogo" não encontrado no clone. Não foi possível ajustar o tamanho para o PDF.'
-      );
-    }
-    // --- FIM DA MODIFICAÇÃO PARA O TAMANHO DO LOGO NO PDF ---
-    const htmlContent = printableElement.outerHTML;
-
-    try {
-      const response = await fetch('/api/generate-pdf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ html: htmlContent }),
-      });
-
-      if (!response.ok) {
-        let errorMessage = `Erro do servidor: ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.details || errorMessage;
-        } catch (e: unknown) {
-          /* Ignora erro ao parsear JSON do erro */
-          console.log(e);
-        }
-        throw new Error(errorMessage);
-      }
-
-      const blob = await response.blob();
-      const employeeNameSafe = paystubDetails.header.nomeFunc
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9_ ]/g, '')
-        .replace(/\s+/g, '_');
-      const competencyRefSafe = selectedCompetency.replace(
-        /[^a-zA-Z0-9-]/g,
-        '_'
-      );
-      const fileName = `contracheque_${competencyRefSafe}_${employeeNameSafe}.pdf`;
-
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    } catch (error) {
-      console.error('Erro ao gerar PDF (frontend):', error);
-      alert(
-        `Ocorreu um erro ao gerar o PDF: ${error instanceof Error ? error.message : String(error)}`
-      );
-    } finally {
-      setIsGeneratingPdf(false);
-    }
-  };
-
   if (
     isAuthenticating ||
     (isLoadingCompetencies && !competencies && !isAuthenticating)
@@ -214,12 +114,7 @@ export default function PaystubDashboardClient() {
               selectedCompetency={selectedCompetency}
               onCompetencyChange={handleCompetencyChange}
               isLoading={isLoadingCompetencies}
-            />
-
-            <PdfActions
-              onGeneratePdf={handleGeneratePdf}
-              isGeneratingPdf={isGeneratingPdf}
-              canGenerate={!!(selectedCompetency && paystubDetails)}
+              paystubDetails={paystubDetails}
             />
 
             <PaystubDisplayArea
