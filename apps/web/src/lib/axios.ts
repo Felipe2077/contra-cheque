@@ -1,21 +1,31 @@
-// src/lib/axios.ts
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333/api/v1',
+  // IMPORTANTE: Use a URL correta da API
+  baseURL:
+    process.env.NEXT_PUBLIC_API_URL ||
+    'http://contrachequeapi.vpioneira.com.br:3334/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
+  // CRUCIAL: Adicione withCredentials para funcionar com CORS
+  withCredentials: true,
 });
 
 // Rotas que não devem receber o token JWT
-const PUBLIC_ROUTES = ['/auth/login', '/auth/reset-password'];
+const PUBLIC_ROUTES = ['/auth/login', '/auth/reset-password', '/users']; // Adicionei /users que também é público
 
 // Interceptor para adicionar o token JWT a cada requisição
 apiClient.interceptors.request.use(
   (config) => {
+    // Log para debug (remova em produção)
+    console.log('Request:', config.method?.toUpperCase(), config.url);
+
     // Não precisamos adicionar o token para rotas públicas
-    if (config.url && PUBLIC_ROUTES.includes(config.url)) {
+    if (
+      config.url &&
+      PUBLIC_ROUTES.some((route) => config.url!.includes(route))
+    ) {
       return config;
     }
 
@@ -31,16 +41,23 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Opcional: Interceptor de resposta para lidar com erros globais (ex: token expirado -> logout)
+// Interceptor de resposta para lidar com erros globais
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Log para debug (remova em produção)
+    console.error(
+      'Response Error:',
+      error.response?.status,
+      error.response?.data
+    );
+
     if (axios.isAxiosError(error) && error.response) {
       if (error.response.status === 401) {
         const originalRequestUrl = error.config?.url;
-        // Evitar loop se o erro 401 for de uma rota pública que não deveria ter token
         const isPublicRouteAttempt =
-          originalRequestUrl && PUBLIC_ROUTES.includes(originalRequestUrl);
+          originalRequestUrl &&
+          PUBLIC_ROUTES.some((route) => originalRequestUrl.includes(route));
 
         if (!isPublicRouteAttempt) {
           console.warn(
@@ -48,7 +65,7 @@ apiClient.interceptors.response.use(
           );
           if (typeof window !== 'undefined') {
             localStorage.removeItem('authToken');
-            window.location.href = '/login'; // Ou uma navegação mais elegante
+            window.location.href = '/login';
           }
         }
       }

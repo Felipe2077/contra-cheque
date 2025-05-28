@@ -1,4 +1,4 @@
-// src/lib/api/authService.ts
+// apps/web/src/lib/api/authService.ts
 import axios from 'axios';
 import { z } from 'zod';
 import apiClient from '../axios'; // Sua instância configurada do Axios

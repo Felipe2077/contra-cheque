@@ -45,7 +45,7 @@ async function bootstrap() {
   try {
     // 1. Inicializa o Data Source
     await initializeDataSource();
-    console.log('��️  Database initialized successfully.');
+    console.log('🗄️  Database initialized successfully.');
 
     // 2. Cria a instância do Fastify
     const app = Fastify({
@@ -68,7 +68,7 @@ async function bootstrap() {
     await app.register(fastifyHelmet);
     app.log.info('Helmet plugin registrado.');
 
-    // CORS para permitir requisições cross-origin
+    // CORS para permitir requisições cross-origin - REGISTRADO APENAS UMA VEZ
     await app.register(fastifyCors, {
       origin: (origin, callback) => {
         const allowedOrigins =
@@ -77,24 +77,126 @@ async function bootstrap() {
                 'http://localhost:3000',
                 'http://10.10.100.79:3001',
                 'http://192.168.1.221:3000',
+                'http://contracheque.vpioneira.com.br',
                 'http://contracheque.vpioneira.com.br:3001',
                 'http://192.168.2.115:3000',
+              ]
+            : [
+                env.FRONTEND_URL_PROD,
+                'http://contracheque.vpioneira.com.br',
+                'http://contracheque.vpioneira.com.br:3001',
+              ].filter(Boolean);
 
-                undefined,
-              ] // Permite localhost e requisições sem origin (ex: Postman)
-            : [env.FRONTEND_URL_PROD]; // Em produção, apenas a URL do frontend
+        // Log para debug
+        app.log.info(`CORS check - Origin: ${origin || 'NO ORIGIN'}`);
 
-        if (!allowedOrigins.includes(origin) && origin !== undefined) {
-          // Adicionado origin !== undefined para o caso de '*' não ser desejado explicitamente
-          return callback(new Error(`Not allowed by CORS: ${origin}`), false);
+        // Se origin for undefined (requisições diretas como Postman), permite
+        if (!origin) {
+          return callback(null, true);
         }
-        callback(null, true);
+
+        // Verifica se a origem está na lista de permitidas
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
+
+        // Bloqueia origens não permitidas
+        app.log.warn(`CORS blocked origin: ${origin}`);
+        return callback(new Error(`Not allowed by CORS: ${origin}`), false);
       },
+      credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      // credentials: true, // Descomente se você precisar lidar com cookies/sessões via CORS
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      exposedHeaders: ['Content-Length', 'X-Request-Id'],
+      maxAge: 86400, // Cache preflight por 24 horas
+      preflightContinue: false, // IMPORTANTE: Adicione isto
+      optionsSuccessStatus: 200, // IMPORTANTE: Adicione isto
     });
     app.log.info('CORS plugin registrado.');
+
+    // Hook onRequest para lidar com OPTIONS e debug
+    app.addHook('onRequest', async (request, reply) => {
+      // Log apenas em desenvolvimento para não poluir logs em produção
+      if (env.NODE_ENV === 'development') {
+        app.log.info(
+          {
+            method: request.method,
+            url: request.url,
+            origin: request.headers.origin || 'NO ORIGIN',
+            'access-control-request-method':
+              request.headers['access-control-request-method'],
+            'access-control-request-headers':
+              request.headers['access-control-request-headers'],
+          },
+          'Incoming request',
+        );
+      }
+
+      // Responde imediatamente às requisições OPTIONS
+      if (request.method === 'OPTIONS') {
+        const origin = request.headers.origin;
+        const allowedOrigins =
+          env.NODE_ENV === 'development'
+            ? [
+                'http://localhost:3000',
+                'http://10.10.100.79:3001',
+                'http://192.168.1.221:3000',
+                'http://contracheque.vpioneira.com.br',
+                'http://contracheque.vpioneira.com.br:3001',
+                'http://192.168.2.115:3000',
+              ]
+            : [
+                env.FRONTEND_URL_PROD,
+                'http://contracheque.vpioneira.com.br',
+                'http://contracheque.vpioneira.com.br:3001',
+              ].filter(Boolean);
+
+        // Verifica se é uma origem permitida ou se não tem origem
+        const isAllowed = !origin || allowedOrigins.includes(origin);
+
+        if (isAllowed) {
+          reply
+            .header('Access-Control-Allow-Origin', origin || '*')
+            .header('Access-Control-Allow-Credentials', 'true')
+            .header(
+              'Access-Control-Allow-Methods',
+              'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+            )
+            .header(
+              'Access-Control-Allow-Headers',
+              'Content-Type, Authorization, X-Requested-With',
+            )
+            .header('Access-Control-Max-Age', '86400')
+            .status(200)
+            .send();
+        } else {
+          app.log.warn(`OPTIONS request blocked for origin: ${origin}`);
+          reply.status(403).send({ error: 'Origin not allowed' });
+        }
+
+        // IMPORTANTE: Certifique-se de que a requisição OPTIONS não continue
+        return reply;
+      }
+    });
+
+    // Hook de debug temporário para ver as respostas (REMOVA EM PRODUÇÃO)
+    if (env.NODE_ENV === 'development') {
+      app.addHook('onSend', async (request, reply, payload) => {
+        // Log apenas erros ou requisições OPTIONS
+        if (reply.statusCode >= 400 || request.method === 'OPTIONS') {
+          app.log.info(
+            {
+              method: request.method,
+              url: request.url,
+              statusCode: reply.statusCode,
+              headers: reply.getHeaders(),
+            },
+            'Response details',
+          );
+        }
+        return payload;
+      });
+    }
 
     // JWT para autenticação baseada em token
     if (!env.JWT_SECRET) {
@@ -108,12 +210,15 @@ async function bootstrap() {
       sign: {
         expiresIn: env.JWT_EXPIRES_IN || '1h', // Garante um fallback se JWT_EXPIRES_IN não estiver no .env
       },
-      // messages: { // Opcional: Customizar mensagens de erro do JWT
-      //   badRequestErrorMessage: 'Formato do token inválido.',
-      //   noAuthorizationInHeaderMessage: 'Token de autorização ausente no cabeçalho.',
-      //   authorizationTokenExpiredMessage: 'Token de autorização expirado.',
-      //   authorizationTokenInvalid: (err) => `Token de autorização inválido: ${err.message}`
-      // }
+      messages: {
+        // Opcional: Customizar mensagens de erro do JWT
+        badRequestErrorMessage: 'Formato do token inválido.',
+        noAuthorizationInHeaderMessage:
+          'Token de autorização ausente no cabeçalho.',
+        authorizationTokenExpiredMessage: 'Token de autorização expirado.',
+        authorizationTokenInvalid: (err) =>
+          `Token de autorização inválido: ${err.message}`,
+      },
     });
     app.log.info('JWT plugin registrado.');
 
