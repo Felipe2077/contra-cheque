@@ -78,6 +78,7 @@ async function bootstrap() {
                 'http://10.10.100.79:3001',
                 'http://192.168.1.221:3000',
                 'http://contracheque.vpioneira.com.br',
+                'https://contracheque.vpioneira.com.br',
                 'http://contracheque.vpioneira.com.br:3001',
                 'http://192.168.2.115:3000',
               ]
