@@ -1,25 +1,31 @@
+// apps/web/src/lib/axios.ts - Configuração atualizada
+
 import axios from 'axios';
 
 const apiClient = axios.create({
-  // IMPORTANTE: Use a URL correta da API
+  // URL da API
   baseURL:
     process.env.NEXT_PUBLIC_API_URL ||
-    'http://contrachequeapi.vpioneira.com.br:3334/api/v1',
+    'https://contrachequeapi.vpioneira.com.br/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
-  // CRUCIAL: Adicione withCredentials para funcionar com CORS
-  withCredentials: true,
+  // REMOVER withCredentials temporariamente para testar
+  // withCredentials: true,
+
+  // Adicionar timeout para evitar requests que ficam pendentes
+  timeout: 30000, // 30 segundos
 });
 
 // Rotas que não devem receber o token JWT
-const PUBLIC_ROUTES = ['/auth/login', '/auth/reset-password', '/users']; // Adicionei /users que também é público
+const PUBLIC_ROUTES = ['/auth/login', '/auth/reset-password', '/users'];
 
 // Interceptor para adicionar o token JWT a cada requisição
 apiClient.interceptors.request.use(
   (config) => {
-    // Log para debug (remova em produção)
+    // Log para debug (mantenha temporariamente)
     console.log('Request:', config.method?.toUpperCase(), config.url);
+    console.log('Base URL:', config.baseURL);
 
     // Não precisamos adicionar o token para rotas públicas
     if (
@@ -37,20 +43,26 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('Request Error:', error);
     return Promise.reject(error);
   }
 );
 
 // Interceptor de resposta para lidar com erros globais
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('Response success:', response.status, response.config.url);
+    return response;
+  },
   (error) => {
-    // Log para debug (remova em produção)
-    console.error(
-      'Response Error:',
-      error.response?.status,
-      error.response?.data
-    );
+    // Log detalhado para debug
+    console.error('Response Error Details:', {
+      status: error.response?.status,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      url: error.config?.url,
+      method: error.config?.method,
+    });
 
     if (axios.isAxiosError(error) && error.response) {
       if (error.response.status === 401) {

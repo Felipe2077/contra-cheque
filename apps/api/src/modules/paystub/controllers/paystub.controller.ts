@@ -9,6 +9,11 @@ const paginationQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
 });
 
+// Novo schema para query parameter
+const paystubDetailsQuerySchema = z.object({
+  refMesAno: z.string().min(1, 'refMesAno query parameter is required'),
+});
+
 // Schema para validação dos params da rota de detalhes
 const paystubDetailsParamsSchema = z.object({
   // refMesAno pode ser algo como "ABRIL/2025" ou "JANEIRO/2024".
@@ -96,16 +101,16 @@ export class PaystubController {
       }
 
       // Validação dos params da rota
-      const paramsValidationResult = paystubDetailsParamsSchema.safeParse(
-        request.params,
+      const queryValidationResult = paystubDetailsQuerySchema.safeParse(
+        request.query,
       );
-      if (!paramsValidationResult.success) {
+      if (!queryValidationResult.success) {
         throw new AppError(
-          `Invalid route parameters: ${paramsValidationResult.error.flatten().fieldErrors}`,
+          `Invalid query parameters: ${queryValidationResult.error.flatten().fieldErrors}`,
           400,
         );
       }
-      const { refMesAno } = paramsValidationResult.data;
+      const { refMesAno } = queryValidationResult.data;
 
       // O refMesAno da URL pode precisar de decodeURIComponent se contiver caracteres como '/'
       // mas o Fastify geralmente lida com isso. Se não, use:

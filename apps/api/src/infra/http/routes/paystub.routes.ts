@@ -19,10 +19,9 @@ export async function paystubRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/v1/paystubs/details/ABRIL%2F2025 (o %2F é o '/' encodado para URL)
   // O Fastify decodifica automaticamente o parâmetro da rota.
   app.get(
-    '/paystubs/details/:refMesAno', // :refMesAno será algo como "ABRIL/2025"
+    '/paystubs/details',
     {
       onRequest: [app.authenticate],
-      // A validação do param :refMesAno já está no controller
     },
     paystubController.getMyPaystubDetailsByCompetencyRef,
   );
@@ -30,11 +29,10 @@ export async function paystubRoutes(app: FastifyInstance): Promise<void> {
   // Rota para obter uma LINHA DE EVENTO específica de um contracheque pelo seu ID único
   // GET /api/v1/paystubs/event/:id
   app.get(
-    '/paystubs/event/:id', // Alterei o path para clareza, distinguindo de um contracheque completo
+    '/paystubs/event/:id',
     {
       onRequest: [app.authenticate],
-      // A validação do param :id já está no controller
     },
-    paystubController.getMyPaystubEventById, // <--- NOME DO MÉTODO CORRIGIDO
+    paystubController.getMyPaystubEventById,
   );
 }
