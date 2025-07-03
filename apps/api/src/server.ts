@@ -68,7 +68,7 @@ async function bootstrap() {
     await app.register(fastifyHelmet);
     app.log.info('Helmet plugin registrado.');
 
-    // CORS para permitir requisições cross-origin - REGISTRADO APENAS UMA VEZ
+    // CORS para permitir requisições cross-origin - CONFIGURAÇÃO MELHORADA
     await app.register(fastifyCors, {
       origin: (origin, callback) => {
         const allowedOrigins =
@@ -84,7 +84,7 @@ async function bootstrap() {
               ]
             : [
                 env.FRONTEND_URL_PROD,
-                'http://contracheque.vpioneira.com.br',
+                'https://contracheque.vpioneira.com.br',
                 'http://contracheque.vpioneira.com.br:3001',
               ].filter(Boolean);
 
@@ -107,15 +107,22 @@ async function bootstrap() {
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        'Accept',
+        'Origin',
+        'Cache-Control',
+      ],
       exposedHeaders: ['Content-Length', 'X-Request-Id'],
       maxAge: 86400, // Cache preflight por 24 horas
-      preflightContinue: false, // IMPORTANTE: Adicione isto
-      optionsSuccessStatus: 200, // IMPORTANTE: Adicione isto
+      preflightContinue: false, // Deixa o plugin lidar completamente com preflight
+      optionsSuccessStatus: 204, // Status correto para requisições OPTIONS de preflight
     });
     app.log.info('CORS plugin registrado.');
 
-    // Hook onRequest para lidar com OPTIONS e debug
+    // Hook onRequest SIMPLIFICADO - apenas para debug, sem interceptar OPTIONS
     app.addHook('onRequest', async (request, reply) => {
       // Log apenas em desenvolvimento para não poluir logs em produção
       if (env.NODE_ENV === 'development') {
@@ -133,51 +140,7 @@ async function bootstrap() {
         );
       }
 
-      // Responde imediatamente às requisições OPTIONS
-      if (request.method === 'OPTIONS') {
-        const origin = request.headers.origin;
-        const allowedOrigins =
-          env.NODE_ENV === 'development'
-            ? [
-                'http://localhost:3000',
-                'http://10.10.100.79:3001',
-                'http://192.168.1.221:3000',
-                'http://contracheque.vpioneira.com.br',
-                'http://contracheque.vpioneira.com.br:3001',
-                'http://192.168.2.115:3000',
-              ]
-            : [
-                env.FRONTEND_URL_PROD,
-                'http://contracheque.vpioneira.com.br',
-                'http://contracheque.vpioneira.com.br:3001',
-              ].filter(Boolean);
-
-        // Verifica se é uma origem permitida ou se não tem origem
-        const isAllowed = !origin || allowedOrigins.includes(origin);
-
-        if (isAllowed) {
-          reply
-            .header('Access-Control-Allow-Origin', origin || '*')
-            .header('Access-Control-Allow-Credentials', 'true')
-            .header(
-              'Access-Control-Allow-Methods',
-              'GET, POST, PUT, DELETE, PATCH, OPTIONS',
-            )
-            .header(
-              'Access-Control-Allow-Headers',
-              'Content-Type, Authorization, X-Requested-With',
-            )
-            .header('Access-Control-Max-Age', '86400')
-            .status(200)
-            .send();
-        } else {
-          app.log.warn(`OPTIONS request blocked for origin: ${origin}`);
-          reply.status(403).send({ error: 'Origin not allowed' });
-        }
-
-        // IMPORTANTE: Certifique-se de que a requisição OPTIONS não continue
-        return reply;
-      }
+      // Removi toda a lógica de OPTIONS - deixando o plugin CORS lidar com isso
     });
 
     // Hook de debug temporário para ver as respostas (REMOVA EM PRODUÇÃO)
